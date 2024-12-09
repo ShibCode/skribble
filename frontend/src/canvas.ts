@@ -31,7 +31,10 @@ export const initialize = () => {
 
   if (!ctx) throw new Error("Canvas context not found");
 
+  const config = { primary: "black", secondary: "white", size: 1 };
+
   let isDrawing = false;
+  let activeMouseButton: number | null = null;
   let lastX: number;
   let lastY: number;
   const paths: Path[] = [];
@@ -50,8 +53,13 @@ export const initialize = () => {
   scaleCanvas();
 
   const handleMouseDown = (e: MouseEvent) => {
+    e.preventDefault();
+
+    if (e.button === 1) return;
+
     const { top, left } = canvas.getBoundingClientRect();
     isDrawing = true;
+    activeMouseButton = e.button;
 
     currentPath = { points: [] };
     currentPath.points.push({ x: e.clientX - left, y: e.clientY - top });
@@ -69,6 +77,7 @@ export const initialize = () => {
     }
 
     isDrawing = false;
+    activeMouseButton = null;
     ctx.closePath();
   };
 
@@ -92,20 +101,30 @@ export const initialize = () => {
     ctx.lineCap = "round"; // Ensures smooth round ends for lines
     ctx.lineJoin = "round"; // Ensures smooth joins between lines
 
+    if (activeMouseButton === 0) ctx.strokeStyle = config.primary;
+    else ctx.strokeStyle = config.secondary;
+    ctx.lineWidth = config.size;
+
     ctx.stroke();
 
     lastX = currentX;
     lastY = currentY;
   };
 
+  const handleContextMenu = (e: MouseEvent) => {
+    e.preventDefault();
+  };
+
   canvas.addEventListener("mousedown", handleMouseDown);
   canvas.addEventListener("mouseup", handleMouseUp);
   canvas.addEventListener("mousemove", handleMouseMove);
+  canvas.addEventListener("contextmenu", handleContextMenu);
 
   const cleanupListeners = () => {
     canvas.removeEventListener("mousedown", handleMouseDown);
     canvas.removeEventListener("mouseup", handleMouseUp);
     canvas.removeEventListener("mousemove", handleMouseMove);
+    canvas.removeEventListener("contextmenu", handleContextMenu);
   };
 
   const clear = () => {
@@ -131,5 +150,5 @@ export const initialize = () => {
     });
   };
 
-  return { ctx, cleanupListeners, clear, undo };
+  return { config, cleanupListeners, clear, undo };
 };

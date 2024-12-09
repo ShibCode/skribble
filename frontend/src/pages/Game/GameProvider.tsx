@@ -67,20 +67,30 @@ const GameProvider = ({ children }: { children: React.ReactNode }) => {
     secondary: "rgb(255, 255, 255)",
   });
 
+  const [count, setCount] = useState(0);
+
   const changeColor = (type: "primary" | "secondary", color: ColorSingular) => {
     setColor((prev) => ({ ...prev, [type]: color }));
   };
 
-  const ctxRef = useRef<CanvasRenderingContext2D>();
+  type ConfigType = {
+    primary: string;
+    secondary: string;
+    size: number;
+  };
+
+  const configRef = useRef<ConfigType>();
   const clearRef = useRef<() => void>();
   const undoRef = useRef<() => void>();
 
   useEffect(() => {
-    const { ctx, cleanupListeners, clear, undo } = initialize();
+    const { config, cleanupListeners, clear, undo } = initialize();
 
-    ctxRef.current = ctx;
+    configRef.current = config;
     clearRef.current = clear;
     undoRef.current = undo;
+
+    setCount((prev) => (prev += 1));
 
     return () => {
       cleanupListeners();
@@ -88,11 +98,12 @@ const GameProvider = ({ children }: { children: React.ReactNode }) => {
   }, []);
 
   useEffect(() => {
-    if (!ctxRef.current) return;
+    if (!configRef.current) return;
 
-    ctxRef.current.strokeStyle = color.primary;
-    ctxRef.current.lineWidth = size;
-  }, [color.primary, size]);
+    configRef.current.primary = color.primary;
+    configRef.current.secondary = color.secondary;
+    configRef.current.size = size;
+  }, [color, size]);
 
   return (
     <GameContext.Provider
@@ -105,7 +116,6 @@ const GameProvider = ({ children }: { children: React.ReactNode }) => {
         changeColor,
         clear: clearRef.current as () => void,
         undo: undoRef.current as () => void,
-        // fill: fillRef.current as () => void,
       }}
     >
       {children}

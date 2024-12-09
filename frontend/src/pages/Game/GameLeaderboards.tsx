@@ -1,8 +1,8 @@
+import Avatar from "../../components/Avatar";
+
 const players = [{}, {}, {}, {}];
 
 const GameLeaderboards = () => {
-  // ececec
-
   return (
     <div className="bg-white rounded-[4px] flex flex-col overflow-hidden h-max">
       {players.map((player, i) => (
@@ -32,32 +32,7 @@ const Player = ({ isOdd }: PlayerProps) => {
         <span className="text-[13px] !leading-none">540 points</span>
       </div>
 
-      <div className="size-12 relative">
-        <div
-          style={{
-            backgroundImage: "url(/body_atlas.gif)",
-            backgroundRepeat: "no-repeat",
-            backgroundPosition: "0px 0px",
-          }}
-          className="absolute inset-0"
-        ></div>
-        <div
-          style={{
-            backgroundImage: "url(/eyes_atlas.gif)",
-            backgroundRepeat: "no-repeat",
-            backgroundPosition: "0px 0px",
-          }}
-          className="absolute inset-0"
-        ></div>
-        <div
-          style={{
-            backgroundImage: "url(/mouth_atlas.gif)",
-            backgroundRepeat: "no-repeat",
-            backgroundPosition: "0px 0px",
-          }}
-          className="absolute inset-0"
-        ></div>
-      </div>
+      <Avatar size={48} body={0} eyes={0} mouth={0} />
     </div>
   );
 };
