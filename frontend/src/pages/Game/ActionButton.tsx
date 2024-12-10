@@ -5,7 +5,7 @@ type ActionButtonProps = {
   keybind: string;
   icon: string;
   alt: string;
-  onClick: () => void;
+  onClick: (() => void) | undefined;
 };
 
 const ActionButton = ({
@@ -17,7 +17,11 @@ const ActionButton = ({
 }: ActionButtonProps) => {
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key.toLowerCase() === keybind.toLowerCase()) onClick();
+      if (
+        e.key.toLowerCase() === keybind.toLowerCase() &&
+        typeof onClick === "function"
+      )
+        onClick();
     };
 
     document.addEventListener("keydown", handleKeyDown);

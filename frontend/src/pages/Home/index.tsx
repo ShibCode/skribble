@@ -53,7 +53,7 @@ const Home = () => {
           <input
             type="text"
             placeholder="Enter your username"
-            className="rounded-sm px-2 py-1 placeholder:font-bold text-black w-full"
+            className="rounded-sm px-2 py-1.5 placeholder:font-bold text-black w-full"
           />
 
           <div className="flex w-full justify-center relative bg-black/10 rounded-[4px] p-4">

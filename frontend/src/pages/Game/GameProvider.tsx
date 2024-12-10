@@ -66,8 +66,7 @@ const GameProvider = ({ children }: { children: React.ReactNode }) => {
     primary: "rgb(0, 0, 0)",
     secondary: "rgb(255, 255, 255)",
   });
-
-  const [count, setCount] = useState(0);
+  const [actions, setActions] = useState({ undo: () => {}, clear: () => {} });
 
   const changeColor = (type: "primary" | "secondary", color: ColorSingular) => {
     setColor((prev) => ({ ...prev, [type]: color }));
@@ -80,17 +79,13 @@ const GameProvider = ({ children }: { children: React.ReactNode }) => {
   };
 
   const configRef = useRef<ConfigType>();
-  const clearRef = useRef<() => void>();
-  const undoRef = useRef<() => void>();
 
   useEffect(() => {
     const { config, cleanupListeners, clear, undo } = initialize();
 
     configRef.current = config;
-    clearRef.current = clear;
-    undoRef.current = undo;
 
-    setCount((prev) => (prev += 1));
+    setActions({ undo, clear });
 
     return () => {
       cleanupListeners();
@@ -114,8 +109,8 @@ const GameProvider = ({ children }: { children: React.ReactNode }) => {
         setSize,
         setTool,
         changeColor,
-        clear: clearRef.current as () => void,
-        undo: undoRef.current as () => void,
+        clear: actions.clear,
+        undo: actions.undo,
       }}
     >
       {children}

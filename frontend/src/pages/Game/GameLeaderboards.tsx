@@ -5,7 +5,7 @@ const players = [{}, {}, {}, {}];
 const GameLeaderboards = () => {
   return (
     <div className="bg-white rounded-[4px] flex flex-col overflow-hidden h-max">
-      {players.map((player, i) => (
+      {players.map((_, i) => (
         <Player key={i} isOdd={i % 2 === 1} />
       ))}
     </div>
