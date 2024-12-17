@@ -20,7 +20,8 @@ export const useGame = () => {
   return context;
 };
 
-const me = undefined;
+// !!! remove after develepoment
+// const me = undefined;
 
 const GameProvider = ({ children }: { children: React.ReactNode }) => {
   const [game, setGame] = useState<Game | null>(null);
