@@ -1,6 +1,5 @@
-import { createContext, useContext, useEffect, useMemo, useState } from "react";
+import { createContext, useContext, useMemo, useState } from "react";
 import { userId } from "../App";
-import { socket } from "../socket";
 
 type GameContextType = {
   me: Player | undefined;
