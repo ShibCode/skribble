@@ -1,5 +1,6 @@
 import { createContext, useContext, useEffect, useRef, useState } from "react";
 import { initialize } from "../../canvas";
+import { useGame } from "../../context/GameProvider";
 
 export const colors = [
   "rgb(255, 255, 255)",
@@ -43,7 +44,14 @@ type Color = {
 
 type Tool = "pen" | "fill";
 
-type GameContextType = {
+type ConfigType = {
+  primary: string;
+  secondary: string;
+  size: number;
+  isDisabled: boolean;
+};
+
+type DrawControlsContextType = {
   color: Color;
   tool: Tool;
   size: Size;
@@ -55,11 +63,24 @@ type GameContextType = {
   // fill: () => void;
 };
 
-const GameContext = createContext<GameContextType | undefined>(undefined);
+const DrawControlsContext = createContext<DrawControlsContextType | undefined>(
+  undefined
+);
 
-export const useGameContext = () => useContext(GameContext) as GameContextType;
+export const useDrawControls = () => {
+  const context = useContext(DrawControlsContext);
 
-const GameProvider = ({ children }: { children: React.ReactNode }) => {
+  if (!context)
+    throw new Error(
+      "useDrawControls must be used within a DrawControlsProvider"
+    );
+
+  return context as DrawControlsContextType;
+};
+
+const DrawControlsProvider = ({ children }: { children: React.ReactNode }) => {
+  const { me } = useGame();
+
   const [size, setSize] = useState<Size>(sizes[1]);
   const [tool, setTool] = useState<Tool>("pen");
   const [color, setColor] = useState<Color>({
@@ -70,12 +91,6 @@ const GameProvider = ({ children }: { children: React.ReactNode }) => {
 
   const changeColor = (type: "primary" | "secondary", color: ColorSingular) => {
     setColor((prev) => ({ ...prev, [type]: color }));
-  };
-
-  type ConfigType = {
-    primary: string;
-    secondary: string;
-    size: number;
   };
 
   const configRef = useRef<ConfigType>();
@@ -93,6 +108,11 @@ const GameProvider = ({ children }: { children: React.ReactNode }) => {
   }, []);
 
   useEffect(() => {
+    if (!me || !configRef.current) return;
+    configRef.current.isDisabled = !me.isDrawing;
+  }, [me]);
+
+  useEffect(() => {
     if (!configRef.current) return;
 
     configRef.current.primary = color.primary;
@@ -101,7 +121,7 @@ const GameProvider = ({ children }: { children: React.ReactNode }) => {
   }, [color, size]);
 
   return (
-    <GameContext.Provider
+    <DrawControlsContext.Provider
       value={{
         color,
         tool,
@@ -114,8 +134,8 @@ const GameProvider = ({ children }: { children: React.ReactNode }) => {
       }}
     >
       {children}
-    </GameContext.Provider>
+    </DrawControlsContext.Provider>
   );
 };
 
-export default GameProvider;
+export default DrawControlsProvider;

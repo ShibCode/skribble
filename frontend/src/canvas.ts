@@ -1,3 +1,8 @@
+import { socket } from "./socket";
+
+const FPS = 75;
+const EMIT_DELAY = 1000 / FPS;
+
 const lerp = (start: number, end: number, t: number) => {
   return start + (end - start) * t;
 };
@@ -20,6 +25,8 @@ const interpolatePoints = (
 
 type Path = {
   points: { x: number; y: number }[];
+  color: string | CanvasGradient | CanvasPattern;
+  width: number;
 };
 
 export const initialize = () => {
@@ -31,13 +38,18 @@ export const initialize = () => {
 
   if (!ctx) throw new Error("Canvas context not found");
 
-  const config = { primary: "black", secondary: "white", size: 1 };
+  const config = {
+    primary: "black",
+    secondary: "white",
+    size: 1,
+    isDisabled: false,
+  };
 
   let isDrawing = false;
   let activeMouseButton: number | null = null;
   let lastX: number;
   let lastY: number;
-  const paths: Path[] = [];
+  let paths: Path[] = [];
 
   let currentPath: Path | null = null;
 
@@ -53,6 +65,8 @@ export const initialize = () => {
   scaleCanvas();
 
   const handleMouseDown = (e: MouseEvent) => {
+    if (isDrawing || config.isDisabled) return;
+
     e.preventDefault();
 
     if (e.button === 1) return;
@@ -61,7 +75,11 @@ export const initialize = () => {
     isDrawing = true;
     activeMouseButton = e.button;
 
-    currentPath = { points: [] };
+    currentPath = {
+      points: [],
+      color: activeMouseButton === 0 ? config.primary : config.secondary,
+      width: config.size,
+    };
     currentPath.points.push({ x: e.clientX - left, y: e.clientY - top });
 
     lastX = e.clientX - left;
@@ -81,14 +99,16 @@ export const initialize = () => {
     ctx.closePath();
   };
 
+  let drawEmitTimeout: number | null = null;
+
   const handleMouseMove = (e: MouseEvent) => {
-    if (!isDrawing) return;
+    if (!isDrawing || !currentPath || config.isDisabled) return;
 
     const { top, left } = canvas.getBoundingClientRect();
     const currentX = e.clientX - left;
     const currentY = e.clientY - top;
 
-    currentPath?.points.push({ x: currentX, y: currentY }); // Track the points for the path
+    currentPath.points.push({ x: currentX, y: currentY }); // Track the points for the path
 
     // Interpolate points for smoother drawing with large stroke widths
     const distance = Math.hypot(currentX - lastX, currentY - lastY);
@@ -101,14 +121,20 @@ export const initialize = () => {
     ctx.lineCap = "round"; // Ensures smooth round ends for lines
     ctx.lineJoin = "round"; // Ensures smooth joins between lines
 
-    if (activeMouseButton === 0) ctx.strokeStyle = config.primary;
-    else ctx.strokeStyle = config.secondary;
-    ctx.lineWidth = config.size;
+    ctx.strokeStyle = currentPath.color;
+    ctx.lineWidth = currentPath.width;
 
     ctx.stroke();
 
     lastX = currentX;
     lastY = currentY;
+
+    if (!drawEmitTimeout) {
+      drawEmitTimeout = setTimeout(() => {
+        socket.emit("client:draw", [...paths, currentPath]);
+        drawEmitTimeout = null;
+      }, EMIT_DELAY);
+    }
   };
 
   const handleContextMenu = (e: MouseEvent) => {
@@ -127,17 +153,14 @@ export const initialize = () => {
     canvas.removeEventListener("contextmenu", handleContextMenu);
   };
 
-  const clear = () => {
+  const emptyCanvas = () => {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
   };
 
-  const undo = () => {
-    clear();
-
-    paths.pop();
-
-    // Redraw all paths
+  const drawPaths = () => {
     paths.forEach((path) => {
+      if (!path) return;
+
       ctx.beginPath();
       path.points.forEach((point, index) => {
         if (index === 0) ctx.moveTo(point.x, point.y);
@@ -145,9 +168,36 @@ export const initialize = () => {
       });
       ctx.lineCap = "round";
       ctx.lineJoin = "round";
+      ctx.strokeStyle = path.color;
+      ctx.lineWidth = path.width;
       ctx.stroke();
       ctx.closePath();
     });
+  };
+
+  socket.on("server:draw", (receivedPaths: Path[]) => {
+    paths = receivedPaths;
+    currentPath = null;
+
+    emptyCanvas();
+    drawPaths();
+  });
+
+  const clear = () => {
+    handleMouseUp();
+    emptyCanvas();
+    paths = [];
+    socket.emit("client:draw", []);
+  };
+
+  const undo = () => {
+    handleMouseUp();
+    emptyCanvas();
+    paths.pop();
+
+    // Redraw all paths
+    drawPaths();
+    socket.emit("client:draw", paths);
   };
 
   return { config, cleanupListeners, clear, undo };

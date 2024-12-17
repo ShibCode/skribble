@@ -8,6 +8,7 @@ export default {
       },
       colors: {
         purple: "#ab66eb",
+        overlay: "rgba(3, 8, 29, 0.8)",
       },
     },
   },

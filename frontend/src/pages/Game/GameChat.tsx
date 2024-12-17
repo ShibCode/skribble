@@ -1,99 +1,52 @@
-type MessageType = {
-  type: "text" | "green" | "orange" | "yellow" | "blue";
-  message: string;
-  from?: string;
-};
-
-const messages: MessageType[] = [
-  { type: "orange", message: "Lorem is now the room owner!" },
-  { type: "yellow", message: "Copied room link to clipboard!" },
-  { type: "green", message: "a joined the room!" },
-  { type: "blue", message: "a is drawing now!" },
-  {
-    type: "text",
-    message: "Message in chat",
-    from: "Lorem",
-  },
-  {
-    type: "text",
-    message: "Message in chat",
-    from: "Lorem",
-  },
-  {
-    type: "text",
-    message: "Message in chat",
-    from: "Lorem",
-  },
-  {
-    type: "text",
-    message: "Message in chat",
-    from: "Lorem",
-  },
-  {
-    type: "text",
-    message: "Message in chat",
-    from: "Lorem",
-  },
-  {
-    type: "text",
-    message: "Message in chat",
-    from: "Lorem",
-  },
-  {
-    type: "text",
-    message: "Message in chat",
-    from: "Lorem",
-  },
-  {
-    type: "text",
-    message: "Message in chat",
-    from: "Lorem",
-  },
-  {
-    type: "text",
-    message: "Message in chat",
-    from: "Lorem",
-  },
-  {
-    type: "text",
-    message: "Message in chat",
-    from: "Lorem",
-  },
-  {
-    type: "text",
-    message: "Message in chat",
-    from: "Lorem",
-  },
-];
+import React, { useState } from "react";
+import { useGame } from "../../context/GameProvider";
+import { socket } from "../../socket";
 
 function GameChat() {
+  const [message, setMessage] = useState("");
+
+  const { me, messages } = useGame();
+
+  const onSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+
+    socket.emit("client:message", message, me!.id);
+
+    setMessage("");
+  };
+
   return (
     <div className="bg-white rounded-[4px] aspect-[300/600] flex flex-col">
       <div className="flex-1 overflow-auto overscroll-contain">
         {messages.map((message, i) => (
-          <Message key={i} {...message} isOdd={i % 2 === 1} />
+          <Message key={i} message={message} isOdd={i % 2 === 1} />
         ))}
       </div>
 
-      <div className="mt-auto p-[0.2em] text-sm">
+      <form onSubmit={onSubmit} className="mt-auto p-[0.2em] text-sm">
         <input
+          type="text"
+          value={message}
+          onChange={(e) => setMessage(e.target.value)}
           placeholder="Type your guess here..."
           className="border w-full border-black rounded-[4px] h-8 px-1 placeholder:text-gray-500 focus-within:outline-blue-500"
         />
-      </div>
+      </form>
     </div>
   );
 }
 
 export default GameChat;
 
-interface MessageProps extends MessageType {
+type MessageProps = {
+  message: Message;
   isOdd: boolean;
-}
+};
 
-const Message = ({ type, message, from, isOdd }: MessageProps) => {
+const Message = ({ message, isOdd }: MessageProps) => {
   const types = {
     text: "text-black",
+    "text-private": "text-[#7dad3f]",
     green: "text-green-600 font-bold",
     orange: "text-orange-500 font-bold",
     yellow: "text-yellow-500 font-bold",
@@ -102,13 +55,14 @@ const Message = ({ type, message, from, isOdd }: MessageProps) => {
 
   return (
     <div
-      className={`p-[0.2em] text-sm ${types[type]} ${
+      className={`p-[0.2em] text-sm ${types[message.type]} ${
         isOdd ? "bg-[#ececec]" : "bg-white"
       }`}
     >
-      {from && <span className="font-bold">{from}: </span>}
-
-      <span className="break-words">{message}</span>
+      {(message.type === "text" || message.type === "text-private") && (
+        <span className="font-bold">{message.from}: </span>
+      )}
+      <span className="break-words">{message.message}</span>
     </div>
   );
 };

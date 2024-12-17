@@ -1,5 +1,9 @@
 import { useMemo, useState } from "react";
 import Avatar from "../../components/Avatar";
+import Arrow from "./Arrow";
+import { socket } from "../../socket";
+import { useNavigate } from "react-router-dom";
+import { userId } from "../../App";
 
 const avatarMax = {
   body: 28,
@@ -7,16 +11,21 @@ const avatarMax = {
   eyes: 57,
 };
 
+const getRandomAvatar = () => {
+  const body = Math.floor(Math.random() * avatarMax.body);
+  const mouth = Math.floor(Math.random() * avatarMax.mouth);
+  const eyes = Math.floor(Math.random() * avatarMax.eyes);
+
+  return { body, mouth, eyes };
+};
+
 const Home = () => {
-  const getRandomAvatar = () => {
-    const body = Math.floor(Math.random() * avatarMax.body);
-    const mouth = Math.floor(Math.random() * avatarMax.mouth);
-    const eyes = Math.floor(Math.random() * avatarMax.eyes);
-
-    return { body, mouth, eyes };
-  };
-
   const [avatar, setAvatar] = useState(getRandomAvatar);
+  const [username, setUsername] = useState("asd");
+
+  const navigate = useNavigate();
+
+  const avatars = useMemo(() => new Array(8).fill(0).map(getRandomAvatar), []);
 
   const handleAvatarChange = (
     part: "body" | "mouth" | "eyes",
@@ -32,9 +41,17 @@ const Home = () => {
     setAvatar(getRandomAvatar());
   };
 
-  const avatars = useMemo(() => {
-    return new Array(8).fill(0).map(getRandomAvatar);
-  }, []);
+  const handleStart = () => {
+    if (username.length < 2) return;
+
+    socket.emit(
+      "client:join_game",
+      userId,
+      username,
+      avatar,
+      (gameId: string) => navigate(`/game/${gameId}`)
+    );
+  };
 
   return (
     <div className="flex justify-center items-center h-screen">
@@ -53,6 +70,8 @@ const Home = () => {
           <input
             type="text"
             placeholder="Enter your username"
+            onChange={(e) => setUsername(e.target.value)}
+            value={username}
             className="rounded-sm px-2 py-1.5 placeholder:font-bold text-black w-full"
           />
 
@@ -113,6 +132,7 @@ const Home = () => {
             <button
               className="w-full h-[54px] rounded-[4px] bg-[#53e237] text-[2rem] font-extrabold"
               style={{ textShadow: "2px 2px 0px #0000002b" }}
+              onClick={handleStart}
             >
               Play!
             </button>
@@ -124,27 +144,3 @@ const Home = () => {
 };
 
 export default Home;
-
-type ArrowProps = {
-  direction: "left" | "right";
-};
-
-const Arrow = ({ direction }: ArrowProps) => {
-  const [isHovered, setIsHovered] = useState(false);
-
-  const y = direction === "left" ? "0%" : "100%";
-
-  return (
-    <div
-      style={{
-        backgroundImage: "url(/arrow.gif)",
-        backgroundSize: "200%",
-        backgroundPosition: `${isHovered ? "100%" : "0%"} ${y}`,
-        imageRendering: "pixelated",
-      }}
-      onMouseEnter={() => setIsHovered(true)}
-      onMouseLeave={() => setIsHovered(false)}
-      className="w-full h-full arrow"
-    />
-  );
-};

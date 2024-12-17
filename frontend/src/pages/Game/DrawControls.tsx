@@ -1,13 +1,13 @@
 import { useState } from "react";
-import { colors, sizes, useGameContext } from "./GameProvider";
+import { colors, sizes, useDrawControls } from "./DrawControlsProvider";
 import ActionButton from "./ActionButton";
 import SizeButton from "./SizeButton";
 
 const DrawControls = () => {
-  const { color, tool, setTool, clear, undo } = useGameContext();
+  const { color, tool, setTool, clear, undo } = useDrawControls();
 
   return (
-    <div className="h-12 flex justify-between">
+    <div className="h-12 flex justify-between flex-wrap gap-1.5">
       <div className="flex gap-1.5">
         <div className="size-12 rounded-[4px] relative overflow-hidden">
           <div
@@ -62,10 +62,10 @@ const DrawControls = () => {
 export default DrawControls;
 
 const ColorPallete = () => {
-  const { changeColor } = useGameContext();
+  const { changeColor } = useDrawControls();
 
   return (
-    <div className="grid grid-cols-[repeat(13,24px)] h-full rounded-[4px] overflow-hidden">
+    <div className="grid grid-cols-[repeat(13,24px)] h-12 rounded-[4px] overflow-hidden">
       {colors.map((color) => (
         <button
           onClick={() => changeColor("primary", color)}
@@ -83,7 +83,7 @@ const ColorPallete = () => {
 
 const SizePallete = () => {
   const [isSizeModalOpen, setIsSizeModalOpen] = useState(false);
-  const { size, setSize } = useGameContext();
+  const { size, setSize } = useDrawControls();
 
   return (
     <div className="relative">

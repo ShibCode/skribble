@@ -1,4 +1,4 @@
-import { sizes } from "./GameProvider";
+import { sizes } from "./DrawControlsProvider";
 
 type SizeButtonProps = {
   size: number;

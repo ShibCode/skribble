@@ -3,18 +3,33 @@ type AvatarProps = {
   body: number;
   eyes: number;
   mouth: number;
+  crown?: boolean;
 };
 
-const Avatar = ({ size = 48, body = 0, eyes = 0, mouth = 0 }: AvatarProps) => {
+const Avatar = ({
+  size = 48,
+  body = 0,
+  eyes = 0,
+  mouth = 0,
+  crown = false,
+}: AvatarProps) => {
   return (
     <div
-      className="relative"
+      className="relative isolate"
       style={{
         width: `${size}px`,
         height: `${size}px`,
         imageRendering: "pixelated",
       }}
     >
+      {crown && (
+        <img
+          style={{ width: `${size / 2}px`, height: `${size / 2}px` }}
+          src="/crown.gif"
+          className="absolute z-10 -top-[22%] -left-[5%]"
+        />
+      )}
+
       <div
         style={{
           backgroundImage: "url(/body_atlas.gif)",
