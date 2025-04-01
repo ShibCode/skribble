@@ -12,6 +12,7 @@ import { useGame } from "../../context/GameProvider";
 import WordRevealPanel from "./WordRevealPanel";
 import PickingWordPanel from "./PickingWordPanel";
 import OverlayContent from "../../components/OverlayContent";
+import ResultPanel from "./ResultPanel";
 
 export type PickState = {
   options: string[];
@@ -64,7 +65,7 @@ const Game = () => {
   return (
     <div className="flex justify-center">
       <div className="w-[95%] xl:w-[90%] max-w-[1312px] flex flex-col items-start gap-3 py-6">
-        <img src="/logo.gif" alt="logo" className="max-w-[312px]" />
+        {/* <img src="/logo.gif" alt="logo" className="max-w-[312px]" /> */}
 
         <div className="w-full grid grid-cols-[200px_1fr_250px] xl:grid-cols-[200px_1fr_300px] gap-1.5">
           <GameHeader />
@@ -73,14 +74,20 @@ const Game = () => {
 
           <div className="flex flex-col gap-1.5 relative h-max">
             <OverlayContent state="queue" className="text-3xl">
-              Waiting for players: {game?.players.length} / 2
+              {game.players.length > 1
+                ? "Starting soon..."
+                : `Waiting for players: ${game?.players.length} / 2`}
             </OverlayContent>
 
             <OverlayContent state="showing_round_number" className="text-3xl">
               Round {game.round}
             </OverlayContent>
 
-            <OverlayContent state="picking_word" className="text-xl">
+            <OverlayContent
+              key={game?.players.length}
+              state="picking_word"
+              className="text-xl"
+            >
               <PickingWordPanel
                 pickState={pickState}
                 setPickState={setPickState}
@@ -91,9 +98,13 @@ const Game = () => {
               <WordRevealPanel />
             </OverlayContent>
 
-            <Canvas />
+            <OverlayContent state="result" className="flex flex-col gap-6">
+              <ResultPanel />
+            </OverlayContent>
 
             <DrawControlsProvider>
+              <Canvas />
+
               {me?.isDrawing && game.state === "drawing" && <DrawControls />}
             </DrawControlsProvider>
           </div>

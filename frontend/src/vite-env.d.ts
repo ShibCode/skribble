@@ -40,6 +40,6 @@ type Message =
       from: string;
     }
   | {
-      type: "green" | "blue";
+      type: "green" | "blue" | "red";
       message: string;
     };

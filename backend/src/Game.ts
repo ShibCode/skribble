@@ -9,12 +9,7 @@ import {
 } from "./types";
 import words from "./words.json";
 
-// TODO: finish round on time end
-// TODO: random words
-// TODO: finish game
-// TODO: ${guess} is close
-// TODO: if player leaves game (edge cases like drawer leaves)
-// TODO: reconnection
+const MAX_ROUNDS = 3;
 
 const ROUND_NUMBER_SCREEN_DURATION = 3000;
 const PICKING_WORD_DURATION = 15000;
@@ -22,7 +17,7 @@ const DRAW_DURATION = 120000;
 const WORD_REVEAL_SCREEN_DURATION = 5000;
 const TIME_OFFSET = 1000; // to ensure the clock starts from the allowed time and ends on 0
 
-const getFutureTimestamp = (ms: number) => {
+export const getFutureTimestamp = (ms: number) => {
   return new Date(new Date().getTime() + ms).toISOString();
 };
 
@@ -37,9 +32,13 @@ export class Game {
   drawer: Player | null;
   guessCount: number;
   countdownTarget: string | null;
+
   revealWordTimeout: NodeJS.Timeout | null;
+  pickingWordTimeout: NodeJS.Timeout | null;
+  newTurnTimeout: NodeJS.Timeout | null;
 
   handleDrawBound: (paths: Path[]) => void;
+  handleMessageBound: (message: string, fromId: string) => void;
 
   constructor(id: string) {
     this.id = id;
@@ -53,8 +52,11 @@ export class Game {
     this.guessCount = 0;
     this.countdownTarget = null;
     this.revealWordTimeout = null;
+    this.pickingWordTimeout = null;
+    this.newTurnTimeout = null;
 
     this.handleDrawBound = this.handleDraw.bind(this);
+    this.handleMessageBound = this.handleMessage.bind(this);
   }
 
   // converts the data into appropriate form to be sent to the frontend
@@ -91,8 +93,44 @@ export class Game {
     io.to(this.privateChatId).emit(event, ...(params as any));
   }
 
+  broadcastUpdate() {
+    if (this.state === "drawing") {
+      this.drawer!.socket.to(this.id).emit(
+        "server:update_game",
+        this.getSerializableValue()
+      );
+      this.drawer!.socket.emit(
+        "server:update_game",
+        this.getSerializableValue(true)
+      );
+    } else
+      this.broadcast("server:update_game", this.getSerializableValue(true));
+  }
+
   addHandler(socket: Socket) {
-    socket.on("client:message", this.handleMessage.bind(this));
+    socket.on("client:message", this.handleMessageBound);
+  }
+
+  removeHandler(socket: Socket) {
+    socket.off("client:message", this.handleMessageBound);
+    socket.off("client:draw", this.handleDrawBound);
+  }
+
+  addPlayer({ socket, ...playerWithoutSocket }: Player) {
+    this.addHandler(socket);
+    socket.join(this.id);
+
+    this.players.push({ socket, ...playerWithoutSocket });
+    this.playersMemory.push(playerWithoutSocket);
+  }
+
+  removePlayer(socket: Socket) {
+    this.removeHandler(socket);
+    socket.leave(this.id);
+
+    this.players = this.players.filter((p) => p.id !== socket.data!.id);
+
+    socket.data = null;
   }
 
   handleMessage(message: string, fromId: string) {
@@ -123,20 +161,13 @@ export class Game {
     this.drawer!.roundIncrement = from.roundIncrement / 2;
     from.socket.join(this.privateChatId);
 
+    this.broadcastUpdate();
     this.broadcast("server:message", {
       type: "green",
       message: `${from.username} has guessed the word`,
     });
 
     if (this.guessCount === this.players.length - 1) this.revealWord();
-  }
-
-  addPlayer({ socket, ...playerWithoutSocket }: Player) {
-    this.addHandler(socket);
-    socket.join(this.id);
-
-    this.players.push({ socket, ...playerWithoutSocket });
-    this.playersMemory.push(playerWithoutSocket);
   }
 
   getNextDrawer() {
@@ -156,10 +187,10 @@ export class Game {
     this.state = "showing_round_number";
     this.countdownTarget = getFutureTimestamp(ROUND_NUMBER_SCREEN_DURATION);
     this.broadcast("server:update_game", this.getSerializableValue(true));
-    setTimeout(
-      () => this.startNextTurn(),
-      ROUND_NUMBER_SCREEN_DURATION + TIME_OFFSET
-    );
+    this.newTurnTimeout = setTimeout(() => {
+      this.newTurnTimeout = null;
+      this.startNextTurn();
+    }, ROUND_NUMBER_SCREEN_DURATION + TIME_OFFSET);
   }
 
   getOptions() {
@@ -195,20 +226,19 @@ export class Game {
 
     this.broadcast("server:update_game", this.getSerializableValue());
 
-    let hasRanOutOfTimeToPick = false;
-
-    const timeout = setTimeout(() => {
-      hasRanOutOfTimeToPick = true;
+    this.pickingWordTimeout = setTimeout(() => {
+      this.pickingWordTimeout = null;
       this.word = words[Math.floor(Math.random() * words.length)];
       this.startDrawingPhase();
     }, PICKING_WORD_DURATION + TIME_OFFSET);
 
     // give drawer options to pick a word from
     this.drawer.socket.emit("server:pick_word", options, (word: string) => {
-      if (hasRanOutOfTimeToPick) return;
+      if (!this.pickingWordTimeout) return;
 
+      clearTimeout(this.pickingWordTimeout);
+      this.pickingWordTimeout = null;
       this.word = word;
-      clearTimeout(timeout);
       this.startDrawingPhase();
     });
   }
@@ -235,10 +265,10 @@ export class Game {
 
     this.drawer!.socket.on("client:draw", this.handleDrawBound);
 
-    this.revealWordTimeout = setTimeout(
-      () => this.revealWord(),
-      DRAW_DURATION + TIME_OFFSET
-    );
+    this.revealWordTimeout = setTimeout(() => {
+      this.revealWordTimeout = null;
+      this.revealWord();
+    }, DRAW_DURATION + TIME_OFFSET);
   }
 
   handleDraw(paths: Path[]) {
@@ -270,9 +300,111 @@ export class Game {
     });
     this.broadcast("server:update_game", this.getSerializableValue(true));
 
-    setTimeout(() => {
+    this.newTurnTimeout = setTimeout(() => {
+      this.newTurnTimeout = null;
+      if (!isNewRound) return this.startNextTurn();
+
+      if (this.round >= MAX_ROUNDS) this.endGame();
+      else this.startNewRound();
+    }, WORD_REVEAL_SCREEN_DURATION + TIME_OFFSET);
+  }
+
+  cancelTurn() {
+    // if picking word
+    if (this.state === "picking_word" && this.pickingWordTimeout) {
+      clearTimeout(this.pickingWordTimeout);
+      this.pickingWordTimeout = null;
+
+      const isNewRound = this.players.indexOf(this.drawer!) === 0;
+
+      this.removePlayer(this.drawer!.socket);
+      this.drawer = null;
+
       if (isNewRound) this.startNewRound();
       else this.startNextTurn();
-    }, WORD_REVEAL_SCREEN_DURATION + TIME_OFFSET);
+    }
+
+    // if drawing
+    if (this.state === "drawing") {
+      if (this.revealWordTimeout) clearTimeout(this.revealWordTimeout);
+
+      this.state = "revealing_word";
+      this.countdownTarget = getFutureTimestamp(WORD_REVEAL_SCREEN_DURATION);
+      this.guessCount = 0;
+
+      const isNewRound = this.players.indexOf(this.drawer!) === 0;
+
+      this.removePlayer(this.drawer!.socket);
+      this.drawer = null;
+
+      this.players.forEach((player) => {
+        if (isNewRound) player.canDrawThisRound = true; // reset if new round
+        player.socket.leave(this.privateChatId);
+        player.hasGuessed = false;
+      });
+      this.broadcast("server:update_game", this.getSerializableValue(true));
+
+      setTimeout(() => {
+        if (!isNewRound) return this.startNextTurn();
+
+        if (this.round >= MAX_ROUNDS) this.endGame();
+        else this.startNewRound();
+      }, WORD_REVEAL_SCREEN_DURATION + TIME_OFFSET);
+    }
+  }
+
+  endGame() {
+    this.state = "result";
+
+    if (this.revealWordTimeout) {
+      clearTimeout(this.revealWordTimeout);
+      this.revealWordTimeout = null;
+    }
+
+    if (this.pickingWordTimeout) {
+      clearTimeout(this.pickingWordTimeout);
+      this.pickingWordTimeout = null;
+    }
+
+    if (this.newTurnTimeout) {
+      clearTimeout(this.newTurnTimeout);
+      this.newTurnTimeout = null;
+    }
+
+    this.drawer = null;
+    this.word = null;
+
+    this.countdownTarget = getFutureTimestamp(6000);
+
+    const winner = [...this.players].sort((a, b) => b.points - a.points)[0];
+
+    this.broadcastUpdate();
+    this.broadcast("server:message", {
+      type: "blue",
+      message: `${winner.username} won the game!`,
+    });
+
+    setTimeout(() => {
+      this.broadcast("server:message", {
+        type: "blue",
+        message: `Room connection has closed`,
+      });
+      this.destroy();
+    }, 6000 + TIME_OFFSET);
+  }
+
+  destroy() {
+    this.players.forEach((player) => {
+      this.removeHandler(player.socket);
+      player.socket.leave(this.id);
+      player.socket.data = null;
+    });
+
+    this.players = [];
+    this.playersMemory = [];
+
+    this.drawer = null;
+    this.word = null;
+    this.countdownTarget = null;
   }
 }

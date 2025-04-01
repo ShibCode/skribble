@@ -36,7 +36,7 @@ const PickingWordPanel = ({ pickState, setPickState }: ModalProps) => {
           </div>
         </div>
       ) : (
-        <div className="flex flex-col items-center gap-3">
+        <div className="flex flex-col items-center gap-3 text-center">
           <p className="text-[34px]">{drawer!.username} is choosing a word!</p>
           <Avatar size={70} {...drawer!.avatar} />
         </div>

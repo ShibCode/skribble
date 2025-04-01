@@ -11,7 +11,9 @@ if (userId) {
   // do something here
 } else {
   userId = uuidv4();
+  // localStorage.setItem("id", userId);
 }
+
 const App = () => {
   const [isConnected, setIsConnected] = useState(false);
 
@@ -29,13 +31,13 @@ const App = () => {
   }, []);
 
   // !!! uncomment this after develeopment
-  if (!isConnected) {
-    return (
-      <div className="min-h-screen flex justify-center items-center text-white text-3xl">
-        Loading...
-      </div>
-    );
-  }
+  // if (!isConnected) {
+  //   return (
+  //     <div className="min-h-screen flex justify-center items-center text-white text-3xl">
+  //       Loading...
+  //     </div>
+  //   );
+  // }
 
   return (
     <Routes>

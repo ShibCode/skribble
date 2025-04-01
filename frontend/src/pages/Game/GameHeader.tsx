@@ -19,7 +19,7 @@ const GameHeader = () => {
         </div>
 
         <div className="text-xl font-bold translate-y-0.5">
-          Round {game?.round} of 10
+          Round {game?.round} of 3
         </div>
       </div>
 

@@ -1,11 +1,38 @@
-import React, { useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { useGame } from "../../context/GameProvider";
 import { socket } from "../../socket";
+import { a } from "motion/react-client";
 
 function GameChat() {
   const [message, setMessage] = useState("");
 
   const { me, messages } = useGame();
+
+  const container = useRef<HTMLDivElement | null>(null);
+  const isAtBottom = useRef(false);
+
+  useEffect(() => {
+    const handleScroll = () => {
+      if (!container.current) return;
+
+      isAtBottom.current =
+        container.current?.scrollTop ===
+        container.current?.scrollHeight - container.current?.offsetHeight;
+    };
+
+    container.current?.addEventListener("scroll", handleScroll);
+    return () => {
+      container.current?.removeEventListener("scroll", handleScroll);
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!container.current) return;
+
+    if (isAtBottom.current) {
+      container.current.scrollTo(0, container.current.scrollHeight);
+    }
+  }, [messages]);
 
   const onSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -17,7 +44,7 @@ function GameChat() {
 
   return (
     <div className="bg-white rounded-[4px] aspect-[300/600] flex flex-col">
-      <div className="flex-1 overflow-auto overscroll-contain">
+      <div ref={container} className="flex-1 overflow-auto overscroll-contain">
         {messages.map((message, i) => (
           <Message key={i} message={message} isOdd={i % 2 === 1} />
         ))}
@@ -44,13 +71,14 @@ type MessageProps = {
 };
 
 const Message = ({ message, isOdd }: MessageProps) => {
-  const types = {
+  const types: Record<Message["type"], string> = {
     text: "text-black",
     "text-private": "text-[#7dad3f]",
     green: "text-green-600 font-bold",
-    orange: "text-orange-500 font-bold",
-    yellow: "text-yellow-500 font-bold",
     blue: "text-blue-600 font-bold",
+    red: "text-red-600 font-bold",
+    // orange: "text-orange-500 font-bold",
+    // yellow: "text-yellow-500 font-bold",
   };
 
   return (

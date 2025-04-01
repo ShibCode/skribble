@@ -1,4 +1,4 @@
-import { Game } from "./Game";
+import { Game, getFutureTimestamp } from "./Game";
 import { Avatar, Socket } from "./types";
 import { v4 as uuidv4 } from "uuid";
 import { io } from "./app";
@@ -23,18 +23,68 @@ const playerDefaults = {
 export class GameManager {
   games: Record<string, Game>;
   queue: Record<string, Game>;
+  gameStartTimeout: NodeJS.Timeout | null;
 
   constructor() {
     this.games = {};
     this.queue = {};
+    this.gameStartTimeout = null;
   }
 
   addHandler(socket: Socket) {
-    socket.on("client:join_game", use(this.handleJoinGame.bind(this), socket));
-    socket.on(
-      "client:connect_to_game",
-      use(this.handleConnectToGame.bind(this), socket)
+    const handleJoinGameBound = use(this.handleJoinGame.bind(this), socket);
+    const handleConnectToGameBound = use(
+      this.handleConnectToGame.bind(this),
+      socket
     );
+
+    socket.on("client:join_game", handleJoinGameBound);
+    socket.on("client:connect_to_game", handleConnectToGameBound);
+
+    socket.on("disconnect", () => {
+      if (socket.data?.gameId) {
+        const game =
+          this.queue[socket.data.gameId] || this.games[socket.data.gameId];
+        const message = `${socket.data.username} left the game`;
+
+        if (game.state === "queue") {
+          game.removePlayer(socket);
+
+          if (game.players.length < 2) {
+            game.countdownTarget = null;
+            clearTimeout(this.gameStartTimeout!);
+            this.gameStartTimeout = null;
+          }
+
+          game.broadcast("server:update_game", game.getSerializableValue());
+          game.broadcast("server:message", { type: "green", message });
+          return;
+        }
+
+        if (game.players.length <= 1) return;
+
+        if (game.players.length === 2) {
+          game.removePlayer(socket);
+          game.endGame();
+
+          return;
+        }
+
+        // if drawer left, cancel turn
+        if (game.drawer?.socket.id === socket.id) return game.cancelTurn();
+
+        game.removePlayer(socket);
+
+        if (game.players.length === 0) {
+          delete this.games[game.id];
+        } else {
+          game.broadcastUpdate();
+          game.broadcast("server:message", { type: "red", message });
+        }
+      }
+      socket.off("client:join_game", handleJoinGameBound);
+      socket.off("client:connect_to_game", handleConnectToGameBound);
+    });
   }
 
   handleJoinGame(
@@ -44,6 +94,16 @@ export class GameManager {
     callback: (gameId: string) => void,
     socket: Socket
   ) {
+    const game = Object.values(this.queue)[0] || this.createGame();
+
+    socket.data = {
+      ...playerDefaults,
+      id: userId,
+      username,
+      avatar,
+      gameId: game.id,
+    };
+
     const player: Player = {
       ...playerDefaults,
       socket,
@@ -52,13 +112,21 @@ export class GameManager {
       avatar,
     };
 
-    const game = Object.values(this.queue)[0] || this.createGame();
     game.addPlayer(player);
     callback(game.id);
     if (game.players.length >= MINIMUM_PLAYERS) {
-      this.games[game.id] = game;
-      delete this.queue[game.id];
-      setTimeout(() => game.start(), 2000);
+      if (this.gameStartTimeout) {
+        return;
+      }
+
+      game.countdownTarget = getFutureTimestamp(15000);
+      game.broadcast("server:update_game", game.getSerializableValue());
+
+      this.gameStartTimeout = setTimeout(() => {
+        this.games[game.id] = game;
+        delete this.queue[game.id];
+        game.start();
+      }, 15000);
     }
   }
 

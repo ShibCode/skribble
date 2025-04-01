@@ -7,8 +7,8 @@ const DrawControls = () => {
   const { color, tool, setTool, clear, undo } = useDrawControls();
 
   return (
-    <div className="h-12 flex justify-between flex-wrap gap-1.5">
-      <div className="flex gap-1.5">
+    <div className="xl:h-12 flex flex-col xl:flex-row justify-between gap-1.5">
+      <div className="h-12 flex gap-1.5">
         <div className="size-12 rounded-[4px] relative overflow-hidden">
           <div
             style={{ backgroundColor: color.primary }}
@@ -28,32 +28,39 @@ const DrawControls = () => {
         <SizePallete />
       </div>
 
-      <div className="flex gap-1.5">
-        <ActionButton
-          keybind="B"
-          icon="/pen.gif"
-          alt="pen"
-          isActive={tool === "pen"}
-          onClick={() => setTool("pen")}
-        />
+      <div className="flex justify-between xl:justify-normal flex-grow gap-1.5">
+        <div className="flex gap-1.5 xl:mx-auto">
+          <ActionButton
+            keybind="B"
+            icon="/pen.gif"
+            alt="pen"
+            isActive={tool === "pen"}
+            onClick={() => setTool("pen")}
+          />
 
-        <ActionButton
-          keybind="F"
-          icon="/fill.gif"
-          alt="fill"
-          isActive={tool === "fill"}
-          onClick={() => setTool("fill")}
-        />
-      </div>
+          <ActionButton
+            keybind="F"
+            icon="/fill.gif"
+            alt="fill"
+            isActive={tool === "fill"}
+            onClick={() => setTool("fill")}
+          />
+        </div>
 
-      <div className="flex gap-1.5">
-        <ActionButton keybind="U" icon="/undo.gif" alt="undo" onClick={undo} />
-        <ActionButton
-          keybind="C"
-          icon="/clear.gif"
-          alt="clear"
-          onClick={clear}
-        />
+        <div className="flex gap-1.5">
+          <ActionButton
+            keybind="U"
+            icon="/undo.gif"
+            alt="undo"
+            onClick={undo}
+          />
+          <ActionButton
+            keybind="C"
+            icon="/clear.gif"
+            alt="clear"
+            onClick={clear}
+          />
+        </div>
       </div>
     </div>
   );
@@ -65,7 +72,7 @@ const ColorPallete = () => {
   const { changeColor } = useDrawControls();
 
   return (
-    <div className="grid grid-cols-[repeat(13,24px)] h-12 rounded-[4px] overflow-hidden">
+    <div className="grid grid-cols-[repeat(13,1fr)] xl:grid-cols-[repeat(13,24px)] h-12 rounded-[4px] overflow-hidden flex-grow">
       {colors.map((color) => (
         <button
           onClick={() => changeColor("primary", color)}

@@ -1,4 +1,4 @@
-import { Socket as SocketOriginal } from "socket.io";
+import { DefaultEventsMap, Socket as SocketOriginal } from "socket.io";
 
 export type Path = {
   points: { x: number; y: number }[];
@@ -38,7 +38,24 @@ export type Avatar = {
   mouth: number;
 };
 
-export type Socket = SocketOriginal<ClientToServerEvents, ServerToClientEvents>;
+export type PlayerAbracadabra = {
+  id: string;
+  username: string;
+  avatar: Avatar;
+  points: number;
+  isDrawing: boolean;
+  canDrawThisRound: boolean;
+  hasGuessed: boolean;
+  roundIncrement: number;
+  gameId: string;
+};
+
+export type Socket = SocketOriginal<
+  ClientToServerEvents,
+  ServerToClientEvents,
+  DefaultEventsMap,
+  PlayerAbracadabra | null
+>;
 
 export type Player = {
   socket: Socket;
@@ -76,6 +93,6 @@ export type Message =
       from: string;
     }
   | {
-      type: "green" | "blue";
+      type: "green" | "blue" | "red";
       message: string;
     };

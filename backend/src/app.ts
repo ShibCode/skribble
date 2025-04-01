@@ -1,21 +1,27 @@
 import express from "express";
 import http from "http";
-import { Server, Socket } from "socket.io";
+import { DefaultEventsMap, Server, Socket } from "socket.io";
 import { GameManager } from "./GameManager";
-import { ClientToServerEvents, ServerToClientEvents } from "./types";
+import {
+  ClientToServerEvents,
+  PlayerAbracadabra,
+  ServerToClientEvents,
+} from "./types";
 
 const app = express();
 const server = http.createServer(app);
 
-export const io = new Server<ClientToServerEvents, ServerToClientEvents>(
-  server,
-  {
-    cors: {
-      origin: "*",
-      methods: ["GET", "POST"],
-    },
-  }
-);
+export const io = new Server<
+  ClientToServerEvents,
+  ServerToClientEvents,
+  DefaultEventsMap,
+  PlayerAbracadabra
+>(server, {
+  cors: {
+    origin: "*",
+    methods: ["GET", "POST"],
+  },
+});
 
 const gameManager = new GameManager();
 
