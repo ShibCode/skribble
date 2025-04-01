@@ -65,7 +65,7 @@ const Game = () => {
   return (
     <div className="flex justify-center">
       <div className="w-[95%] xl:w-[90%] max-w-[1312px] flex flex-col items-start gap-3 py-6">
-        {/* <img src="/logo.gif" alt="logo" className="max-w-[312px]" /> */}
+        <img src="/logo.gif" alt="logo" className="max-w-[312px]" />
 
         <div className="w-full grid grid-cols-[200px_1fr_250px] xl:grid-cols-[200px_1fr_300px] gap-1.5">
           <GameHeader />

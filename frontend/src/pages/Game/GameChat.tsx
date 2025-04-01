@@ -1,7 +1,6 @@
 import React, { useEffect, useRef, useState } from "react";
 import { useGame } from "../../context/GameProvider";
 import { socket } from "../../socket";
-import { a } from "motion/react-client";
 
 function GameChat() {
   const [message, setMessage] = useState("");

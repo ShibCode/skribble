@@ -19,14 +19,10 @@ export const useGame = () => {
   return context;
 };
 
-// !!! remove after develepoment
-// const me = undefined;
-
 const GameProvider = ({ children }: { children: React.ReactNode }) => {
   const [game, setGame] = useState<Game | null>(null);
   const [messages, setMessages] = useState<Message[]>([]);
 
-  // !!! uncomment this after develeopment
   const me = useMemo(
     () => game?.players.find((player) => player.id === userId),
     [game]
